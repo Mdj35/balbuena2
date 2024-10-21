@@ -1,171 +1,173 @@
-    import React, { useContext, useEffect, useState } from 'react';
-    import { BookingContext } from './BookingContext';
-    import CustomCalendar from './CustomCalendar';
-    import axios from 'axios';
-    import { useNavigate, Link } from 'react-router-dom';
-    import logo from './assets/emlogo.png'; // Adjust the path to your logo
-    import './CreateBook.css';
+import React, { useContext, useEffect, useState } from 'react';
+import { BookingContext } from './BookingContext';
+import CustomCalendar from './CustomCalendar';
+import axios from 'axios';
+import { useNavigate, Link } from 'react-router-dom';
+import logo from './assets/emlogo.png'; // Adjust the path to your logo
+import jsPDF from 'jspdf'; // Import jsPDF
+import './CreateBook.css';
 
-    const TimeDatePayment = () => {
-        const { formData, setFormData } = useContext(BookingContext);
-        const [availableTimes] = useState([
-            '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-            '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM',
-            '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'
-        ]);
-        const [bookedTimes, setBookedTimes] = useState([]);
-        const [loading, setLoading] = useState(false);
-        const [isMenuOpen, setIsMenuOpen] = useState(false);
-        const [notification, setNotification] = useState('');
-        const [showNotificationCard, setShowNotificationCard] = useState(false);
-        const navigate = useNavigate();
+const TimeDatePayment = () => {
+    const { formData, setFormData } = useContext(BookingContext);
+    const [availableTimes] = useState([
+        '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
+        '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM',
+        '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'
+    ]);
+    const [bookedTimes, setBookedTimes] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [notification, setNotification] = useState('');
+    const [showNotificationCard, setShowNotificationCard] = useState(false);
+    const navigate = useNavigate();
 
-        // State for additional fields
-        const [customerName, setCustomerName] = useState(formData.name || '');
-        const [selectedDate, setSelectedDate] = useState(formData.date || '');
-        const [selectedTime, setSelectedTime] = useState(formData.time || '');
-        const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(formData.paymentMethod || '');
-        const [customerEmail, setCustomerEmail] = useState(formData.email || '');
-        const [customerContactNo, setCustomerContactNo] = useState(formData.contactNo || '');
+    // State for additional fields
+    const [customerName, setCustomerName] = useState(formData.name || '');
+    const [selectedDate, setSelectedDate] = useState(formData.date || '');
+    const [selectedTime, setSelectedTime] = useState(formData.time || '');
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(formData.paymentMethod || '');
+    const [customerEmail, setCustomerEmail] = useState(formData.email || '');
+    const [customerContactNo, setCustomerContactNo] = useState(formData.contactNo || '');
 
-        // Fetch booked times for the selected date
-        useEffect(() => {
-            const fetchBookedTimes = async () => {
-                if (selectedDate) {
-                    setLoading(true); // Show loading
-                    try {
-                        const response = await axios.post('https://vynceianoani.helioho.st/Balbuena/booked-times.php', { date: selectedDate });
-                        setBookedTimes(response.data);
-                    } catch (error) {
-                        console.error('Error fetching booked times:', error);
-                        setNotification('Failed to fetch booked times. Please try again.');
-                        setShowNotificationCard(true);
-                    } finally {
-                        setLoading(false); // Hide loading
-                    }
-                }
-            };
-
-            fetchBookedTimes();
-        }, [selectedDate]);
-        const handleTimeSelect = async (time) => {
-            try {
-                // Format the time to 'HH:mm:ss'
-                const formattedTime = time.includes('AM') || time.includes('PM') ? 
-                    new Date(`1970-01-01 ${time}`).toLocaleTimeString('en-GB', { hour12: false }) : 
-                    time; // 'HH:mm:ss'
-        
-                // Check availability via API
-                const formattedDate = new Date(selectedDate).toISOString().split('T')[0];
-                const response = await fetch('https://vynceianoani.helioho.st/Balbuena/check-availability.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ date: formattedDate, time: formattedTime }),
-                });
-                const data = await response.json();
-        
-                if (data.status === 'available') {
-                    // Set selectedTime in original format for visual match
-                    setFormData({ ...formData, time });  // Save original `time` here
-                    setSelectedTime(time);               // This matches the `time` in `map`
-                    setNotification('');
-                    setShowNotificationCard(false);
-                } else {
-                    setNotification(data.message);
+    // Fetch booked times for the selected date
+    useEffect(() => {
+        const fetchBookedTimes = async () => {
+            if (selectedDate) {
+                setLoading(true); // Show loading
+                try {
+                    const response = await axios.post('https://vynceianoani.helioho.st/Balbuena/booked-times.php', { date: selectedDate });
+                    setBookedTimes(response.data);
+                } catch (error) {
+                    console.error('Error fetching booked times:', error);
+                    setNotification('Failed to fetch booked times. Please try again.');
                     setShowNotificationCard(true);
+                } finally {
+                    setLoading(false); // Hide loading
                 }
-            } catch (error) {
-                console.error('Error checking for duplicate booking:', error);
-                setNotification('An error occurred. Please try again.');
+            }
+        };
+
+        fetchBookedTimes();
+    }, [selectedDate]);
+
+    const handleTimeSelect = async (time) => {
+        try {
+            const formattedTime = time.includes('AM') || time.includes('PM')
+                ? new Date(`1970-01-01 ${time}`).toLocaleTimeString('en-GB', { hour12: false })
+                : time;
+
+            const formattedDate = new Date(selectedDate).toISOString().split('T')[0];
+            const response = await fetch('https://vynceianoani.helioho.st/Balbuena/check-availability.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date: formattedDate, time: formattedTime }),
+            });
+            const data = await response.json();
+
+            if (data.status === 'available') {
+                setFormData({ ...formData, time });
+                setSelectedTime(time);
+                setNotification('');
+                setShowNotificationCard(false);
+            } else {
+                setNotification(data.message);
                 setShowNotificationCard(true);
             }
-        };
-        
-        
-        
+        } catch (error) {
+            console.error('Error checking for duplicate booking:', error);
+            setNotification('An error occurred. Please try again.');
+            setShowNotificationCard(true);
+        }
+    };
 
-        const handleInputChange = (e) => {
-            const { name, value } = e.target;
-            setFormData({ ...formData, [name]: value });
-            if (name === 'contactNo') {
-                setCustomerContactNo(value);
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+        if (name === 'contactNo') {
+            setCustomerContactNo(value);
+        }
+    };
+
+    const handleNameChange = (e) => {
+        const nameValue = e.target.value;
+        setCustomerName(nameValue);
+        setFormData({ ...formData, name: nameValue });
+    };
+
+    const generatePDFReceipt = (bookingData) => {
+        const doc = new jsPDF();
+
+        doc.text('Booking Receipt', 20, 20);
+        doc.text(`Name: ${bookingData.name}`, 20, 30);
+        doc.text(`Service: ${bookingData.service}`, 20, 40);
+        doc.text(`Date: ${bookingData.date}`, 20, 50);
+        doc.text(`Time: ${bookingData.time}`, 20, 60);
+        doc.text(`Payment Method: ${bookingData.paymentMethod}`, 20, 70);
+        doc.text(`Email: ${bookingData.email}`, 20, 80);
+        doc.text(`Contact No: ${bookingData.contactNo}`, 20, 90);
+
+        doc.save('booking-receipt.pdf'); // Trigger the download
+    };
+
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+        setLoading(true);
+
+        const formattedDate = new Date(selectedDate).toISOString().split('T')[0];
+        const formattedTime = selectedTime.includes('AM') || selectedTime.includes('PM')
+            ? new Date(`1970-01-01 ${selectedTime}`).toLocaleTimeString('en-GB', { hour12: false })
+            : selectedTime;
+
+        const bookingData = {
+            name: customerName,
+            service: formData.service,
+            date: formattedDate,
+            time: formattedTime,
+            paymentMethod: selectedPaymentMethod,
+            email: customerEmail,
+            contactNo: customerContactNo,
+            staffID: formData.staffID,
+        };
+
+        try {
+            const response = await fetch('https://vynceianoani.helioho.st/Balbuena/submit-booking.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bookingData),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.Error || 'An error occurred while submitting the booking');
             }
-        };
 
-        const handleNameChange = (e) => {
-            const nameValue = e.target.value;
-            setCustomerName(nameValue);
-            setFormData({ ...formData, name: nameValue });
-        };
+            const data = await response.json();
+            console.log('Booking submitted successfully:', data);
 
-        const handleSubmit = async (event) => {
-            event.preventDefault();
-            setLoading(true);
-        
-            // Convert date to 'YYYY-MM-DD' format
-            const formattedDate = new Date(selectedDate).toISOString().split('T')[0]; // 'YYYY-MM-DD'
-        
-            // Convert time to 'HH:mm:ss' format
-            const formattedTime = selectedTime.includes('AM') || selectedTime.includes('PM') ? 
-                new Date(`1970-01-01 ${selectedTime}`).toLocaleTimeString('en-GB', { hour12: false }) : 
-                selectedTime; // 'HH:mm:ss'
-        
-            const bookingData = {
-                name: customerName,
-                service: formData.service,
-                date: formattedDate, // formatted date
-                time: formattedTime,  // formatted time
-                paymentMethod: selectedPaymentMethod,
-                email: customerEmail,
-                contactNo: customerContactNo,
-                staffID: formData.staffID // Ensure you're passing the staffID
-            };
-        
-            try {
-                const response = await fetch('https://vynceianoani.helioho.st/Balbuena/submit-booking.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(bookingData),
-                });
-        
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error('Response error:', errorData);
-                    throw new Error(errorData.Error || 'An error occurred while submitting the booking');
-                }
-        
-                const data = await response.json();
-                console.log('Submitting with staffID:', formData.staffID);
-                console.log('Booking submitted successfully:', data);
-        
-                setNotification('Booking submitted successfully!');
-                navigate('/booking-done');
-            } catch (error) {
-                console.error('Error submitting booking:', error.message);
-                setNotification('Error submitting booking. Please try again.');
-            } finally {
-                setLoading(false);
-            }
-        };
-        
+            setNotification('Booking submitted successfully!');
+            generatePDFReceipt(bookingData); // Generate PDF receipt after successful submission
+            navigate('/booking-done');
+        } catch (error) {
+            console.error('Error submitting booking:', error.message);
+            setNotification('Error submitting booking. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        const handleBack = () => {
-            navigate('/services-barber'); // Navigate back to the services page
-        };
+    const handleBack = () => {
+        navigate('/services-barber');
+    };
 
-        const toggleMenu = () => {
-            setIsMenuOpen(!isMenuOpen);
-        };
+    const toggleMenu = () => {
+        setIsMenuOpen(!isMenuOpen);
+    };
 
-        // Filter available times based on booked times
-        const filteredAvailableTimes = availableTimes.filter(time => !bookedTimes.includes(time));
+    const filteredAvailableTimes = availableTimes.filter(time => !bookedTimes.includes(time));
 
-        // Close notification card
-        const closeNotificationCard = () => {
-            setShowNotificationCard(false);
-        };
+    const closeNotificationCard = () => {
+        setShowNotificationCard(false);
+    };
 
         return (
             <>
