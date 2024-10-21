@@ -12,8 +12,8 @@ const CustBook = () => {
     useEffect(() => {
         const fetchBookings = async () => {
             try {
-                const response = await axios.get('https://vynceianoani.helioho.st/Balbuena/getBookings.php'); // Ensure this endpoint is correct
-                setBookings(response.data);
+                const response = await axios.get('https://vynceianoani.helioho.st/Balbuena/getbook.php'); // Ensure this endpoint is correct
+                setBookings(response.data.data); // Access the data field
             } catch (error) {
                 console.error("Error fetching bookings:", error);
             }
@@ -25,7 +25,7 @@ const CustBook = () => {
     const handleDelete = async (id) => {
         try {
             await axios.delete(`https://vynceianoani.helioho.st/Balbuena/deleteBooking.php/${id}`);
-            setBookings(bookings.filter((booking) => booking.id !== id));
+            setBookings(bookings.filter((booking) => booking.booking_id !== id)); // Match by booking_id
         } catch (error) {
             console.error("Error deleting booking:", error);
         }
@@ -92,15 +92,15 @@ const CustBook = () => {
                                 <tbody>
                                     {bookings.length > 0 ? (
                                         bookings.map((booking) => (
-                                            <tr key={booking.id}>
-                                                <td>{booking.id}</td>
+                                            <tr key={booking.booking_id}>
+                                                <td>{booking.booking_id}</td> {/* Updated to booking_id */}
                                                 <td>{booking.customer_name}</td> {/* Updated to customer_name */}
-                                                <td>{booking.service}</td> {/* Updated to service */}
+                                                <td>{booking.service}</td> {/* Updated to services */}
                                                 <td>{booking.staffName}</td> {/* Fetched from staffName */}
                                                 <td>{formatDate(booking.date)}</td> {/* Format the date */}
                                                 <td>{formatTime(booking.time)}</td> {/* Format the time */}
                                                 <td>
-                                                    <button className="btn btn-danger" onClick={() => handleDelete(booking.id)}>
+                                                    <button className="btn btn-danger" onClick={() => handleDelete(booking.booking_id)}>
                                                         <i className="fas fa-trash"></i>
                                                     </button>
                                                 </td>

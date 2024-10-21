@@ -85,7 +85,8 @@ const Header = ({ onNavClick }) => {
             }}
         >
             <nav className={`nav ${isSticky ? 'sticky' : ''}`}>
-                <Link to="/" className="logo-link">
+                {/* Update the logo link to redirect to /admin */}
+                <Link to="/admin" className="logo-link">
                     <img src={logo} alt="Logo" className="nav-logo" />
                 </Link>
                 <Link 

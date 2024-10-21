@@ -7,49 +7,100 @@ import './Books.css';
 const Payments = () => {
     const navigate = useNavigate();
     const [payments, setPayments] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
 
+    // Handle logout
     const handleLogout = () => {
         navigate('/');
     };
 
+    // Fetch payments from the API and filter distinct values
     const fetchPayments = async () => {
+        setIsLoading(true);
+        setError(null);
         try {
-            const response = await axios.get('http://localhost:3030/bookings');
-            console.log('Fetched payments:', JSON.stringify(response.data, null, 2)); // Log the entire response
-            setPayments(response.data); // Set payments directly since status is included
-        } catch (error) {
-            console.error('Error fetching payments:', error);
-        }
-    };
-
-    const handleDelete = async (bookingID) => {
-        try {
-            await axios.delete(`https://vynceianoani.helioho.st/Balbuena/deleteBooking.php/${bookingID}`);
-            setPayments(payments.filter(payment => payment.id !== bookingID));
-            console.log(`Deleted payment with Booking ID: ${bookingID}`);
-        } catch (error) {
-            console.error(`Error deleting payment with Booking ID ${bookingID}:`, error);
-        }
-    };
-
-    const handleAccept = async (bookingID) => {
-        try {
-            const response = await axios.put(`https://vynceianoani.helioho.st/Balbuena/acceptPayment.php/${bookingID}`);
-            console.log(`Response from server:`, response.data);
-    
-            if (response.data.message) {
-                // Fetch payments again to ensure we have the latest data
-                fetchPayments();
-                console.log(`Accepted payment with Booking ID: ${bookingID}`);
+            const response = await axios.get('https://vynceianoani.helioho.st/Balbuena/getBookings.php');
+            console.log('API response:', response.data);
+            if (response.data.success) {
+                // Filter distinct payments based on bookingID
+                const distinctPayments = response.data.data.reduce((acc, current) => {
+                    const x = acc.find(item => item.bookingID === current.bookingID);
+                    if (!x) {
+                        return acc.concat([current]);
+                    } else {
+                        return acc;
+                    }
+                }, []);
+                setPayments(distinctPayments); // Set distinct payments
+            } else {
+                setError('Failed to fetch payments.');
             }
         } catch (error) {
-            console.error(`Error accepting payment with Booking ID ${bookingID}:`, error);
+            setError('Error fetching payments.');
             console.error('Error details:', error.response ? error.response.data : error.message);
+        } finally {
+            setIsLoading(false);
         }
     };
 
+    // Handle accepting a payment (mark as completed)
+    const handleAccept = async (bookingID) => {
+        try {
+            // Send the request to update the booking status to "Completed"
+            const response = await axios.post('https://vynceianoani.helioho.st/Balbuena/acceptPayment.php', {
+                bookingID: bookingID,
+                status: 'Completed',
+            });
+
+            if (response.data.success) {
+                // Update the local state to reflect the new status
+                setPayments((prevPayments) =>
+                    prevPayments.map((payment) =>
+                        payment.bookingID === bookingID
+                            ? { ...payment, status: 'Completed' }
+                            : payment
+                    )
+                );
+                console.log(`Booking ID ${bookingID} marked as completed`);
+            } else {
+                console.error('Failed to update status for booking ID:', bookingID);
+            }
+        } catch (error) {
+            console.error('Error updating booking status:', error);
+        }
+    };
+
+    // Handle canceling a payment (update status to "Canceled")
+    const handleCancel = async (bookingID) => {
+        try {
+            // Send the request to update the booking status to "Canceled"
+            const response = await axios.post('https://vynceianoani.helioho.st/Balbuena/deleteBooking.php', {
+                bookingID: bookingID,
+                status: 'Canceled',
+            });
+
+            if (response.data.success) {
+                // Update the local state to reflect the canceled status
+                setPayments((prevPayments) =>
+                    prevPayments.map((payment) =>
+                        payment.bookingID === bookingID
+                            ? { ...payment, status: 'Canceled' }
+                            : payment
+                    )
+                );
+                console.log(`Booking ID ${bookingID} marked as canceled`);
+            } else {
+                console.error('Failed to update status for booking ID:', bookingID);
+            }
+        } catch (error) {
+            console.error('Error updating booking status:', error);
+        }
+    };
+
+    // Fetch payments on component mount
     useEffect(() => {
-        fetchPayments(); // Fetch payments on component mount
+        fetchPayments();
     }, []);
 
     return (
@@ -82,24 +133,31 @@ const Payments = () => {
                     <div className="card">
                         <div className="card-body">
                             <h2 className="text-center">Payment</h2>
-                            <table className="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Booking ID</th>
-                                        <th>Name</th>
-                                        <th>Service Price</th>
-                                        <th>Contact No</th>
-                                        <th>Payment Method</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+                            {isLoading ? (
+                                <p>Loading payments...</p>
+                            ) : error ? (
+                                <p className="text-danger">{error}</p>
+                            ) : payments.length > 0 ? (
+                                <table className="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Booking ID</th>
+                                            <th>Name</th>
+                                            <th>Service Type</th>
+                                            <th>Service Price</th>
+                                            <th>Contact No</th>
+                                            <th>Payment Method</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
                                     {payments.map((payment) => (
-                                        <tr key={payment.id}>
-                                            <td>{payment.id}</td>
+                                        <tr key={payment.bookingID}>
+                                            <td>{payment.bookingID}</td>
                                             <td>{payment.customerName}</td>
-                                            <td>₱{payment.servicePrice.toFixed(2)}</td>
+                                            <td>{payment.serviceType}</td>
+                                            <td>₱{isNaN(parseFloat(payment.servicePrice)) ? 'Invalid Price' : parseFloat(payment.servicePrice).toFixed(2)}</td>
                                             <td>{payment.contactNo}</td>
                                             <td>{payment.paymentMethod}</td>
                                             <td>
@@ -108,7 +166,7 @@ const Payments = () => {
                                                         backgroundColor:
                                                             payment.status === 'Completed'
                                                                 ? 'green'
-                                                                : payment.status === 'Pending'
+                                                                : payment.status === 'pending'
                                                                 ? '#d9a23d'
                                                                 : payment.status === 'Canceled'
                                                                 ? 'red'
@@ -121,27 +179,30 @@ const Payments = () => {
                                                 >
                                                     {payment.status}
                                                 </span>
-                                            </td> {/* Display status directly */}
+                                            </td>
                                             <td>
-                                                {payment.status === 'Pending' ? (
+                                                {payment.status === 'pending' ? (
                                                     <button
                                                         className="btn btn-success custom-btn"
-                                                        onClick={() => handleAccept(payment.id)}
+                                                        onClick={() => handleAccept(payment.bookingID)}
                                                     >
-                                                        <i className="fas fa-check"></i>
+                                                        <i className="fas fa-check"></i> Accept
                                                     </button>
                                                 ) : null}
                                                 <button
                                                     className="btn btn-danger custom-btn ml-2"
-                                                    onClick={() => handleDelete(payment.id)}
+                                                    onClick={() => handleCancel(payment.bookingID)}
                                                 >
-                                                    <i className="fas fa-trash"></i>
+                                                    <i className="fas fa-times"></i> Cancel
                                                 </button>
                                             </td>
                                         </tr>
                                     ))}
-                                </tbody>
-                            </table>
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <p>No payments found.</p>
+                            )}
                         </div>
                     </div>
                 </main>

@@ -17,9 +17,10 @@ const Books = () => {
                 const customerResponse = await axios.get('https://vynceianoani.helioho.st/Balbuena/getCustomers.php');
                 setCustomers(customerResponse.data);
 
-                const totalsResponse = await axios.get('http://localhost:3030/totals');
-                setTotalBookings(totalsResponse.data.totalBookings);
-                setTotalIncome(totalsResponse.data.totalIncome);
+                const totalsResponse = await axios.get('https://vynceianoani.helioho.st/Balbuena/totals.php');
+                // Ensure totalBookings and totalIncome are numbers
+                setTotalBookings(totalsResponse.data.totalBookings || 0); // Default to 0 if not present
+                setTotalIncome(Number(totalsResponse.data.totalIncome) || 0); // Convert to number
             } catch (error) {
                 console.error("Error fetching data:", error);
             }
@@ -83,7 +84,7 @@ const Books = () => {
                             <div className="card text-center">
                                 <div className="card-body">
                                     <h5 className="card-title">Total Income</h5>
-                                    <p className="card-text">₱{totalIncome.toFixed(2)}</p>
+                                    <p className="card-text">₱{typeof totalIncome === 'number' ? totalIncome.toFixed(2) : "0.00"}</p>
                                 </div>
                             </div>
                         </div>
@@ -112,7 +113,7 @@ const Books = () => {
                                                 <td>{customer.email}</td>
                                                 <td>
                                                     <button className="btn btn-danger" onClick={() => handleDelete(customer.customerID)}>
-                                                    <i className="fas fa-trash"></i>
+                                                        <i className="fas fa-trash"></i>
                                                     </button>
                                                 </td>
                                             </tr>
