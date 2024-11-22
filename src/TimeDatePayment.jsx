@@ -28,6 +28,8 @@ const TimeDatePayment = () => {
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(formData.paymentMethod || '');
     const [customerEmail, setCustomerEmail] = useState(formData.email || '');
     const [customerContactNo, setCustomerContactNo] = useState(formData.contactNo || '');
+    const [queuePosition, setQueuePosition] = useState(null);
+
 
     // Automatically fetch the staff name and service price on load
     useEffect(() => {
@@ -38,7 +40,9 @@ const TimeDatePayment = () => {
                 // Check if staffID is present to fetch staff name
                 if (formData.staffID) {
                     // Fetch staff name using axios
-                    const staffResponse = await axios.get(`https://vynceianoani.helioho.st/Balbuena/get-staff-name.php?staffID=${formData.staffID}`);
+                    const staffResponse = await axios.get(
+                        `https://vynceianoani.helioho.st/Balbuena/get-staff-name.php?staffID=${formData.staffID}`
+                    );
                     const staffName = staffResponse.data.name || 'Unknown Staff';
                     updatedFormData = { ...updatedFormData, staffName }; // Update formData with staffName
                 }
@@ -46,22 +50,31 @@ const TimeDatePayment = () => {
                 // Check if service is present to fetch service price
                 if (formData.service) {
                     // Fetch service price using axios
-                    const serviceResponse = await axios.get(`https://vynceianoani.helioho.st/Balbuena/get-service-price.php?service=${formData.service}`);
+                    const serviceResponse = await axios.get(
+                        `https://vynceianoani.helioho.st/Balbuena/get-service-price.php?service=${formData.service}`
+                    );
                     const servicePrice = serviceResponse.data.price || 0;
                     updatedFormData = { ...updatedFormData, servicePrice }; // Update formData with servicePrice
                 }
     
                 // Update the form data state
                 setFormData(updatedFormData);
+    
+                // Fetch queue position
+                if (formData.services?.length) {
+                    await fetchQueuePosition();
+                }
             } catch (error) {
-                console.error('Error fetching staff name or service price:', error);
-                setNotification('Failed to fetch staff name or service price. Please try again.');
+                console.error('Error fetching staff name, service price, or queue position:', error);
+                setNotification(
+                    'Failed to fetch staff name, service price, or queue position. Please try again.'
+                );
                 setShowNotificationCard(true);
             }
         };
     
         fetchData();
-    }, [formData.staffID, formData.service, setFormData]);
+    }, [formData.staffID, formData.service, formData.services, setFormData]);
     
     
     // Fetch booked times for the selected date
@@ -84,7 +97,38 @@ const TimeDatePayment = () => {
 
         fetchBookedTimes();
     }, [selectedDate]);
-
+    
+    
+    const fetchQueuePosition = async () => {
+        try {
+            const response = await axios.post(
+                'https://vynceianoani.helioho.st/Balbuena/get-queue-position.php',
+                { services: formData.services }
+            );
+    
+            if (response.status === 200) {
+                const positions = response.data.positions; // Assuming the response contains a `positions` array
+                const updatedServices = formData.services.map((service, index) => ({
+                    ...service,
+                    queuePosition: positions[index], // Map each service's queue position
+                }));
+                setFormData({ ...formData, services: updatedServices });
+            } else {
+                setNotification('Failed to fetch queue positions.');
+                setShowNotificationCard(true);
+            }
+        } catch (error) {
+            console.error('Error fetching queue positions:', error);
+            setNotification('An error occurred while fetching queue positions.');
+            setShowNotificationCard(true);
+        }
+    };
+    
+    // Fetch queue position when services are selected
+    useEffect(() => {
+        if (formData.services?.length) {
+        }
+    }, [formData.services]);
     const handleTimeSelect = async (time) => {
         try {
             const formattedTime = time.includes('AM') || time.includes('PM')
@@ -137,71 +181,122 @@ const TimeDatePayment = () => {
 
     const generatePDFReceipt = (bookingData) => {
         const doc = new jsPDF();
-
+    
+        // Title Section
         doc.setFontSize(16);
         doc.text('Emperors Lounge Barbershop', 20, 20);
         doc.setFontSize(14);
         doc.text('Official Booking Receipt', 20, 30);
-
+    
+        // Customer Information
         doc.setFontSize(12);
         doc.text(`Customer Name: ${bookingData.name}`, 20, 50);
-        doc.text(`Service Booked: ${bookingData.service}`, 20, 60);
-        doc.text(`Date of Appointment: ${bookingData.date}`, 20, 70);
-        doc.text(`Time of Appointment: ${bookingData.time}`, 20, 80);
-        doc.text(`Assigned Barber: ${bookingData.staffName}`, 20, 90);
-
-        doc.text(`Payment Method: ${bookingData.paymentMethod === 'pay_in_store' ? 'Pay in Store' : bookingData.paymentMethod}`, 20, 110);
-        doc.text(`Customer Email: ${bookingData.email}`, 20, 120);
-        doc.text(`Contact Number: ${bookingData.contactNo}`, 20, 130);
-        doc.text(`Total Price: ₱${bookingData.servicePrice}`, 20, 140);
-
-        doc.text('Thank you for choosing Emperors Lounge Barbershop!', 20, 160);
-        doc.text('Please show this receipt to the counter upon arrival.', 20, 170);
-        doc.text('If you have any questions or need to modify your booking, feel free to contact us.', 20, 180);
-
-        doc.text('This receipt serves as confirmation of your booking.', 20, 200);
-
+    
+        // Function to format queue position
+        const formatQueuePosition = (queuePosition) => {
+            if (queuePosition === undefined) return 'Loading...';
+            if (typeof queuePosition === 'object') {
+                return Object.entries(queuePosition)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join(', ');
+            }
+            return queuePosition; // Assume string or number
+        };
+    
+        // Services Section
+        let yOffset = 60; // Start position for services
+        bookingData.services.forEach((service, index) => {
+            // Bullet point for the service
+            doc.circle(15, yOffset - 2, 1, 'F'); // Small filled circle for bullet
+    
+            // Add service details
+            doc.text(`Service ${index + 1}: ${service.serviceName}`, 20, yOffset);
+            doc.text(`Barber: ${service.staffID}`, 30, yOffset + 10); // Indented details
+            doc.text(`Price: ₱${service.servicePrice}`, 30, yOffset + 20);
+    
+            // Properly format and display queue position
+            const queuePosition = formatQueuePosition(service.queuePosition);
+            doc.text(`Queue Position: ${queuePosition}`, 30, yOffset + 30);
+    
+            // Increment yOffset for the next service block
+            yOffset += 40;
+        });
+    
+        // Booking Details Section
+        yOffset += 10; // Add spacing before next section
+        doc.text(`Date of Appointment: ${bookingData.date}`, 20, yOffset);
+        doc.text(`Time of Appointment: ${bookingData.time}`, 20, yOffset + 10);
+    
+        // Payment Information Section
+        yOffset += 30; // Add spacing before payment details
+        doc.text(
+            `Payment Method: ${
+                bookingData.paymentMethod === 'pay_in_store' ? 'Pay in Store' : bookingData.paymentMethod
+            }`,
+            20,
+            yOffset
+        );
+        doc.text(`Customer Email: ${bookingData.email}`, 20, yOffset + 10);
+        doc.text(`Contact Number: ${bookingData.contactNo}`, 20, yOffset + 20);
+    
+        // Total Price Section
+        const totalPrice = bookingData.services.reduce(
+            (acc, service) => acc + (Number(service.servicePrice) || 0),
+            0
+        );
+        doc.text(`Total Price: ₱${totalPrice}`, 20, yOffset + 40);
+    
+        // Footer Section
+        yOffset += 60; // Add spacing before footer
+        doc.setFontSize(11);
+        doc.text('Thank you for choosing Emperors Lounge Barbershop!', 20, yOffset);
+        doc.text('Please show this receipt to the counter upon arrival.', 20, yOffset + 10);
+        doc.text('If you have any questions or need to modify your booking, feel free to contact us.', 20, yOffset + 20);
+        doc.text('This receipt serves as confirmation of your booking.', 20, yOffset + 30);
+    
+        // Save the PDF
         doc.save('booking-receipt.pdf');
     };
+    
 
     const handleSubmit = async (event) => {
         event.preventDefault();
         setLoading(true);
-
+    
         const formattedDate = new Date(selectedDate).toISOString().split('T')[0];
         const formattedTime = selectedTime.includes('AM') || selectedTime.includes('PM')
             ? new Date(`1970-01-01 ${selectedTime}`).toLocaleTimeString('en-GB', { hour12: false })
             : selectedTime;
-
+    
+        // Calculate the total price for selected services
+        const totalPrice = formData.services.reduce((acc, service) => acc + service.servicePrice, 0);
+    
         const bookingData = {
             name: customerName,
-            service: formData.service,
+            services: formData.services,
             date: formattedDate,
             time: formattedTime,
             paymentMethod: selectedPaymentMethod,
             email: customerEmail,
             contactNo: customerContactNo,
-            staffID: formData.staffID,
-            staffName:formData.staffName,
-            servicePrice:formData.servicePrice
+            staffName: formData.staffName,
         };
-
+    
         try {
             // Submit the booking data using axios
             const response = await axios.post('https://vynceianoani.helioho.st/Balbuena/submit-booking.php', bookingData);
-
+    
             if (response.status !== 200) {
                 throw new Error(response.data.message || 'Error occurred during booking submission.');
             }
-
+    
             const data = response.data;
-
+    
             setNotification('Booking submitted successfully!');
-
-            generatePDFReceipt({ ...bookingData, staffName: formData.staffName, servicePrice: formData.servicePrice });
-
+            generatePDFReceipt({ ...bookingData, staffName: formData.staffName, servicePrice: totalPrice });
+    
             setLoading(false);
-
+    
             // Navigate to confirmation page
             navigate('/booking-done');
         } catch (error) {
@@ -211,6 +306,7 @@ const TimeDatePayment = () => {
             setShowNotificationCard(true);
         }
     };
+    
 
     return (
         <>
@@ -241,6 +337,39 @@ const TimeDatePayment = () => {
                         setSelectedDate(date);
                     }} />
                 </div>
+                <div className="formGroup">
+    <label style={{ color: 'white' }}>Queue Positions</label>
+    {formData.services?.length > 0 ? (
+        formData.services.map((service, index) => {
+            // Extract and format queuePosition
+            let queuePositionDisplay = 'Loading...';
+
+            if (service.queuePosition !== undefined) {
+                if (typeof service.queuePosition === 'object') {
+                    // Convert object to a readable string format
+                    queuePositionDisplay = Object.entries(service.queuePosition)
+                        .map(([key, value]) => `${key}: ${value}`)
+                        .join(', ');
+                } else {
+                    queuePositionDisplay = service.queuePosition; // Assume string or number
+                }
+            }
+
+            return (
+                <div key={index} className="queue-item" style={{ marginBottom: '10px', color: 'white' }}>
+                    <strong>Service:</strong> {service.serviceName} <br />
+                    <strong>Queue Position:</strong> {queuePositionDisplay}
+                </div>
+            );
+        })
+    ) : (
+        <div style={{ color: 'white' }}>No services selected</div>
+    )}
+</div>
+
+
+
+
 
                 {/* Time selection */}
                 <div className="time-grid">

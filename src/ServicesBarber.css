@@ -119,3 +119,12 @@ button:hover {
     background-color: #000000;
     transform: scale(1.1);
 }
+.scrollable-container {
+    max-height: 300px; /* Adjust the height as needed */
+    overflow-y: auto; /* Enable vertical scrolling */
+    margin-bottom: 20px; /* Add spacing between the container and other elements */
+    padding-right: 10px; /* Optional: To prevent text cut-off by scrollbar */
+    border: 1px solid #ccc; /* Optional: For better visual distinction */
+    border-radius: 5px;
+    background-color: #f9f9f9; /* Optional: Light background for contrast */
+}
