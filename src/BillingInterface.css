@@ -1,0 +1,21 @@
+.billing-container {
+    position: absolute;
+    top: 120px;
+    left: 750px;
+    padding: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+    border: 1px solid #ffffff;
+    background-color: #ffffff;
+    border-radius: 8px;
+}
+
+.billing-details, .billing-total {
+    color: rgb(22, 22, 22);
+    margin: 20px 0;
+}
+
+.buttonGroup {
+    display: flex;
+    justify-content: space-between;
+}

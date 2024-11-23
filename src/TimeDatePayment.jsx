@@ -4,7 +4,6 @@ import CustomCalendar from './CustomCalendar';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import logo from './assets/emlogo.png'; 
-import jsPDF from 'jspdf'; 
 import './CreateBook.css';
 
 const TimeDatePayment = () => {
@@ -179,133 +178,25 @@ const TimeDatePayment = () => {
         setShowNotificationCard(false);
     };
 
-    const generatePDFReceipt = (bookingData) => {
-        const doc = new jsPDF();
-    
-        // Title Section
-        doc.setFontSize(16);
-        doc.text('Emperors Lounge Barbershop', 20, 20);
-        doc.setFontSize(14);
-        doc.text('Official Booking Receipt', 20, 30);
-    
-        // Customer Information
-        doc.setFontSize(12);
-        doc.text(`Customer Name: ${bookingData.name}`, 20, 50);
-    
-        // Function to format queue position
-        const formatQueuePosition = (queuePosition) => {
-            if (queuePosition === undefined) return 'Loading...';
-            if (typeof queuePosition === 'object') {
-                return Object.entries(queuePosition)
-                    .map(([key, value]) => `${key}: ${value}`)
-                    .join(', ');
-            }
-            return queuePosition; // Assume string or number
-        };
-    
-        // Services Section
-        let yOffset = 60; // Start position for services
-        bookingData.services.forEach((service, index) => {
-            // Bullet point for the service
-            doc.circle(15, yOffset - 2, 1, 'F'); // Small filled circle for bullet
-    
-            // Add service details
-            doc.text(`Service ${index + 1}: ${service.serviceName}`, 20, yOffset);
-            doc.text(`Barber: ${service.staffID}`, 30, yOffset + 10); // Indented details
-            doc.text(`Price: ₱${service.servicePrice}`, 30, yOffset + 20);
-    
-            // Properly format and display queue position
-            const queuePosition = formatQueuePosition(service.queuePosition);
-            doc.text(`Queue Position: ${queuePosition}`, 30, yOffset + 30);
-    
-            // Increment yOffset for the next service block
-            yOffset += 40;
-        });
-    
-        // Booking Details Section
-        yOffset += 10; // Add spacing before next section
-        doc.text(`Date of Appointment: ${bookingData.date}`, 20, yOffset);
-        doc.text(`Time of Appointment: ${bookingData.time}`, 20, yOffset + 10);
-    
-        // Payment Information Section
-        yOffset += 30; // Add spacing before payment details
-        doc.text(
-            `Payment Method: ${
-                bookingData.paymentMethod === 'pay_in_store' ? 'Pay in Store' : bookingData.paymentMethod
-            }`,
-            20,
-            yOffset
-        );
-        doc.text(`Customer Email: ${bookingData.email}`, 20, yOffset + 10);
-        doc.text(`Contact Number: ${bookingData.contactNo}`, 20, yOffset + 20);
-    
-        // Total Price Section
-        const totalPrice = bookingData.services.reduce(
-            (acc, service) => acc + (Number(service.servicePrice) || 0),
-            0
-        );
-        doc.text(`Total Price: ₱${totalPrice}`, 20, yOffset + 40);
-    
-        // Footer Section
-        yOffset += 60; // Add spacing before footer
-        doc.setFontSize(11);
-        doc.text('Thank you for choosing Emperors Lounge Barbershop!', 20, yOffset);
-        doc.text('Please show this receipt to the counter upon arrival.', 20, yOffset + 10);
-        doc.text('If you have any questions or need to modify your booking, feel free to contact us.', 20, yOffset + 20);
-        doc.text('This receipt serves as confirmation of your booking.', 20, yOffset + 30);
-    
-        // Save the PDF
-        doc.save('booking-receipt.pdf');
-    };
-    
+  
 
     const handleSubmit = async (event) => {
         event.preventDefault();
         setLoading(true);
     
-        const formattedDate = new Date(selectedDate).toISOString().split('T')[0];
-        const formattedTime = selectedTime.includes('AM') || selectedTime.includes('PM')
-            ? new Date(`1970-01-01 ${selectedTime}`).toLocaleTimeString('en-GB', { hour12: false })
-            : selectedTime;
-    
-        // Calculate the total price for selected services
-        const totalPrice = formData.services.reduce((acc, service) => acc + service.servicePrice, 0);
-    
-        const bookingData = {
-            name: customerName,
-            services: formData.services,
-            date: formattedDate,
-            time: formattedTime,
+        // Set form data with selected date and time
+        const updatedFormData = {
+            ...formData,
+            date: selectedDate,
+            time: selectedTime,
+            contactNo: customerContactNo, // Ensure contact number is included
             paymentMethod: selectedPaymentMethod,
-            email: customerEmail,
-            contactNo: customerContactNo,
-            staffName: formData.staffName,
         };
-    
-        try {
-            // Submit the booking data using axios
-            const response = await axios.post('https://vynceianoani.helioho.st/Balbuena/submit-booking.php', bookingData);
-    
-            if (response.status !== 200) {
-                throw new Error(response.data.message || 'Error occurred during booking submission.');
-            }
-    
-            const data = response.data;
-    
-            setNotification('Booking submitted successfully!');
-            generatePDFReceipt({ ...bookingData, staffName: formData.staffName, servicePrice: totalPrice });
-    
-            setLoading(false);
-    
-            // Navigate to confirmation page
-            navigate('/booking-done');
-        } catch (error) {
-            console.error('Error submitting booking:', error);
-            setNotification('An error occurred. Please try again.');
-            setLoading(false);
-            setShowNotificationCard(true);
-        }
+        setFormData(updatedFormData);
+        setNotification('Booking information reviewed successfully!');
+        navigate('/billing-interface');
     };
+    
     
 
     return (
@@ -428,27 +319,30 @@ const TimeDatePayment = () => {
                         required
                     >
                         <option value="" disabled>Select Payment Method</option>
-                        <option value="pay_in_store">Pay in Store</option>
+                        <option value="Pay in Store">Pay in Store</option>
                     </select>
                 </div>
 
                 {/* Back and Submit buttons */}
-                <div className="button-container">
-                    <button onClick={handleBack} className="back-button">
-                        Back
-                    </button>
-                    {loading ? (
-                        <div className="loading-container">
-                            <div className="spinner-border text-primary" role="status">
-                                <span className="sr-only">Loading...</span>
-                            </div>
-                        </div>
-                    ) : (
-                        <button onClick={handleSubmit} className="submit-button">
-                            Submit
-                        </button>
-                    )}
-                </div>
+                <div className="formGroup">
+    <button onClick={handleSubmit} disabled={loading}>
+        {loading ? 'Submitting...' : 'Confirm Booking'}
+    </button>
+</div>
+
+{/* Notification card */}
+{showNotificationCard && (
+    <div className="notificationCard">
+        <p>{notification}</p>
+        <button onClick={closeNotificationCard}>Close</button>
+    </div>
+)}
+
+{/* Back button */}
+<div className="formGroup">
+    <button onClick={handleBack}>Back to Services</button>
+</div>
+
             </div>
         </>
     );

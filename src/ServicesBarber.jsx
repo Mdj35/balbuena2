@@ -10,7 +10,8 @@ const ServicesBarber = () => {
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [barbers, setBarbers] = useState([]); // State to hold barbers
-    const [selectedServices, setSelectedServices] = useState([]); // State for selected services and barbers
+    const [selectedServices, setSelectedServices] = useState([]); // State for selected services
+    const [selectedBarber, setSelectedBarber] = useState(''); // State for selected barber
 
     useEffect(() => {
         const fetchBarbers = async () => {
@@ -27,67 +28,59 @@ const ServicesBarber = () => {
     }, []);
 
     const handleAddService = () => {
-        setSelectedServices([
-            ...selectedServices,
-            { service: '', barber: '' }, // Add a new empty service-barber pair
-        ]);
+        setSelectedServices([...selectedServices, '']); // Add a new empty service
     };
 
     const handleRemoveService = (index) => {
         setSelectedServices((prev) => prev.filter((_, i) => i !== index));
     };
 
-    const handleServiceChange = (index, name, value) => {
+    const handleServiceChange = (index, value) => {
         const updatedServices = [...selectedServices];
-        updatedServices[index][name] = value;
+        updatedServices[index] = value;
         setSelectedServices(updatedServices);
     };
 
     const handleNext = async () => {
-        if (selectedServices.some(({ service, barber }) => !service || !barber)) {
-            alert('Please select a service and a barber for each entry.');
+        if (!selectedBarber) {
+            alert('Please select a barber.');
             return;
         }
-    
+        if (selectedServices.some((service) => !service)) {
+            alert('Please select all services.');
+            return;
+        }
+
         try {
             const updatedServices = await Promise.all(
-                selectedServices.map(async ({ service, barber }) => {
-                    const serviceResponse = await axios.get(`https://vynceianoani.helioho.st/Balbuena/service.php?serviceType=${service}`);
-                    if (serviceResponse.data.length === 0) {
+                selectedServices.map(async (service) => {
+                    const response = await axios.get(`https://vynceianoani.helioho.st/Balbuena/service.php?serviceType=${service}`);
+                    if (response.data.length === 0) {
                         throw new Error(`Service "${service}" is not available.`);
                     }
-                    const selectedService = serviceResponse.data[0];
-    
-                    // Fetch the barber's staff details to get the staff name
-                    const barberDetails = barbers.find(b => b.staffID === barber);
-                    const staffName = barberDetails ? barberDetails.staffName : '';
-    
+                    const selectedService = response.data[0];
+
                     return {
                         serviceID: selectedService.serviceID,
-                        staffID: barber,
-                        staffName, // Add the staff name here
+                        staffID: selectedBarber,
                         serviceName: selectedService.serviceType,
-                        servicePrice: selectedService.servicePrice, // Include price in the service data
+                        servicePrice: selectedService.servicePrice,
                     };
                 })
             );
-    
-            // Update formData with selected services, barbers, and their names
+
             setFormData((prevFormData) => ({
                 ...prevFormData,
-                services: updatedServices, // Store multiple services in formData
+                services: updatedServices,
             }));
-    
+
             console.log('Updated Form Data:', updatedServices);
-    
             navigate('/customer-details');
         } catch (error) {
             console.error('Error fetching service:', error);
             alert(error.message || 'Failed to fetch service information. Please try again.');
         }
     };
-    
-    
 
     const handleBack = () => {
         navigate('/');
@@ -117,35 +110,13 @@ const ServicesBarber = () => {
                 </div>
             )}
 
-<div className="container">
-    <h2>Choose Services and Barbers</h2>
-    
-    {/* Scrollable container for service entries */}
-    <div className="scrollable-container">
-        {selectedServices.map((serviceEntry, index) => (
-            <div key={index} className="serviceEntry">
-                <div className="formGroup">
-                    <label>Service</label>
-                    <select
-                        value={serviceEntry.service || ''}
-                        onChange={(e) => handleServiceChange(index, 'service', e.target.value)}
-                        className="dropdown"
-                    >
-                        <option value="" disabled>
-                            Select a service
-                        </option>
-                        <option value="haircut">Haircut - ₱400</option>
-                        <option value="shampoo">Shampoo - ₱450</option>
-                        <option value="massage">Massage - ₱500</option>
-                        <option value="hot towel">Hot Towel - ₱400</option>
-                        <option value="blow dry">Blow Dry - ₱500</option>
-                    </select>
-                </div>
+            <div className="container">
+                <h2>Choose Services and Barber</h2>
                 <div className="formGroup">
                     <label>Barber</label>
                     <select
-                        value={serviceEntry.barber || ''}
-                        onChange={(e) => handleServiceChange(index, 'barber', e.target.value)}
+                        value={selectedBarber}
+                        onChange={(e) => setSelectedBarber(e.target.value)}
                         className="dropdown"
                     >
                         <option value="" disabled>
@@ -158,18 +129,38 @@ const ServicesBarber = () => {
                         ))}
                     </select>
                 </div>
-                <button onClick={() => handleRemoveService(index)}>Remove</button>
+
+                <div className="scrollable-container">
+                    {selectedServices.map((service, index) => (
+                        <div key={index} className="serviceEntry">
+                            <div className="formGroup">
+                                <label>Service</label>
+                                <select
+                                    value={service}
+                                    onChange={(e) => handleServiceChange(index, e.target.value)}
+                                    className="dropdown"
+                                >
+                                    <option value="" disabled>
+                                        Select a service
+                                    </option>
+                                    <option value="haircut">Haircut - ₱400</option>
+                                    <option value="shampoo">Shampoo - ₱450</option>
+                                    <option value="massage">Massage - ₱500</option>
+                                    <option value="hot towel">Hot Towel - ₱400</option>
+                                    <option value="blow dry">Blow Dry - ₱500</option>
+                                </select>
+                            </div>
+                            <button onClick={() => handleRemoveService(index)}>Remove</button>
+                        </div>
+                    ))}
+                </div>
+
+                <button onClick={handleAddService}>Add Another Service</button>
+                <div className="buttonGroup">
+                    <button onClick={handleBack}>Back</button>
+                    <button onClick={handleNext}>Next</button>
+                </div>
             </div>
-        ))}
-    </div>
-
-    <button onClick={handleAddService}>Add Another Service</button>
-    <div className="buttonGroup">
-        <button onClick={handleBack}>Back</button>
-        <button onClick={handleNext}>Next</button>
-    </div>
-</div>
-
         </>
     );
 };
