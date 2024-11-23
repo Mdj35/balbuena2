@@ -71,13 +71,13 @@ const CustBook = () => {
                         </button>
                     </div>
                 </nav>
-
+    
                 {/* Main Content */}
                 <main className="col-md-10 mt-5">
                     {/* Booking Table */}
                     <div className="card">
                         <div className="card-body">
-                            <table className="table table-striped">
+                            <table className="table table-striped table-responsive">
                                 <thead className="thead-dark">
                                     <tr>
                                         <th>Booking ID</th>
@@ -100,7 +100,7 @@ const CustBook = () => {
                                                 <td>{formatDate(booking.date)}</td> {/* Format the date */}
                                                 <td>{formatTime(booking.time)}</td> {/* Format the time */}
                                                 <td>
-                                                    <button className="btn btn-danger" onClick={() => handleDelete(booking.booking_id)}>
+                                                    <button className="btn btn-danger custom-btn" onClick={() => handleDelete(booking.booking_id)}>
                                                         <i className="fas fa-trash"></i>
                                                     </button>
                                                 </td>
@@ -117,6 +117,5 @@ const CustBook = () => {
             </div>
         </div>
     );
-};
-
+}    
 export default CustBook;

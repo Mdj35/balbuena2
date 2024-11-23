@@ -158,100 +158,103 @@ const handleDelete = async (bookingID) => {
                         </button>
                     </div>
                 </nav>
-
+    
                 {/* Main Content */}
                 <main className="col-md-10 mt-5">
                     <div className="card">
                         <div className="card-body">
-                            
                             <h2 className="text-center">Payment</h2>
-                            <div className="d-flex justify-content-between mb-3">
-                                <input
-                                    type="text"
-                                    className="form-control form-control-sm w-25"
-                                    placeholder="Search by customer name"
-                                    value={searchQuery}
-                                    onChange={handleSearchChange}
-                                />
+                            <div className="header-search-container">
+                                <div className="search-bar">
+                                    <input
+                                        type="text"
+                                        className="form-control form-control-sm w-25"
+                                        placeholder="Search by customer name"
+                                        value={searchQuery}
+                                        onChange={handleSearchChange}
+                                    />
+                                </div>
                             </div>
                             {isLoading ? (
                                 <p>Loading payments...</p>
                             ) : error ? (
                                 <p className="text-danger">{error}</p>
                             ) : payments.length > 0 ? (
-                                <table className="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>Booking ID</th>
-                                            <th>Name</th>
-                                            <th>Service Type</th>
-                                            <th>Service Price</th>
-                                            <th>Contact No</th>
-                                            <th>Payment Method</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                    {filteredPayments.map((payment) => (
-                                            <tr key={payment.bookingID}>
-                                                <td>{payment.bookingID}</td>
-                                                <td>{payment.customerName}</td>
-                                                <td>{payment.serviceType}</td>
-                                                <td>
-                                                    ₱{isNaN(parseFloat(payment.servicePrice)) ? 'Invalid Price' : parseFloat(payment.servicePrice).toFixed(2)}
-                                                </td>
-                                                <td>{payment.contactNo}</td>
-                                                <td>{payment.paymentMethod}</td>
-                                                <td>
-                                                <span
-                                                    style={{
-                                                        backgroundColor:
-                                                            payment.status === 'Completed'
-                                                                ? 'green'
-                                                                : payment.status === 'pending'
-                                                                ? '#d9a23d'
-                                                                : payment.status === 'Canceled'
-                                                                ? 'red'
-                                                                : 'lightgray',
-                                                        color: 'white',
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        fontWeight: 'bold',
-                                                    }}
-                                                >
-                                                    {payment.status}
-                                                </span>
-                                            </td>
-                                            <td>
-    {payment.status === 'pending' ? (
-        <button
-            className="btn btn-success custom-btn"
-            onClick={() => handleAccept(payment.bookingID)}
-        >
-            <i className="fas fa-check"></i> Accept
-        </button>
-    ) : null}
-    {payment.status === 'Completed' || payment.status === 'Canceled' ? (
-        <button
-            className="btn btn-danger custom-btn ml-2"
-            onClick={() => handleDelete(payment.bookingID)}
-        >
-            <i className="fas fa-times"></i> Delete
-        </button>
-    ) : (
-        <button
-            className="btn btn-danger custom-btn ml-2"
-            onClick={() => handleCancel(payment.bookingID)}
-        >
-            <i className="fas fa-times"></i> Cancel
-        </button>
-    )}
-</td>;
-                                        </tr>
-                                    ))}
-                                    </tbody>
-                                </table>
+                                <div className="table-responsive">
+                                    <table className="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Booking ID</th>
+                                                <th>Name</th>
+                                                <th>Service Type</th>
+                                                <th>Service Price</th>
+                                                <th>Contact No</th>
+                                                <th>Payment Method</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        {filteredPayments.map((payment) => (
+                                                <tr key={payment.bookingID}>
+                                                    <td>{payment.bookingID}</td>
+                                                    <td>{payment.customerName}</td>
+                                                    <td>{payment.serviceType}</td>
+                                                    <td>
+                                                        ₱{isNaN(parseFloat(payment.servicePrice)) ? 'Invalid Price' : parseFloat(payment.servicePrice).toFixed(2)}
+                                                    </td>
+                                                    <td>{payment.contactNo}</td>
+                                                    <td>{payment.paymentMethod}</td>
+                                                    <td>
+                                                        <span
+                                                            style={{
+                                                                backgroundColor:
+                                                                    payment.status === 'Completed'
+                                                                        ? 'green'
+                                                                        : payment.status === 'pending'
+                                                                        ? '#d9a23d'
+                                                                        : payment.status === 'Canceled'
+                                                                        ? 'red'
+                                                                        : 'lightgray',
+                                                                color: 'white',
+                                                                padding: '4px 8px',
+                                                                borderRadius: '4px',
+                                                                fontWeight: 'bold',
+                                                            }}
+                                                        >
+                                                            {payment.status}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        {payment.status === 'pending' ? (
+                                                            <button
+                                                                className="btn btn-success custom-btn"
+                                                                onClick={() => handleAccept(payment.bookingID)}
+                                                            >
+                                                                <i className="fas fa-check"></i> Accept
+                                                            </button>
+                                                        ) : null}
+                                                        {payment.status === 'Completed' || payment.status === 'Canceled' ? (
+                                                            <button
+                                                                className="btn btn-danger custom-btn ml-2"
+                                                                onClick={() => handleDelete(payment.bookingID)}
+                                                            >
+                                                                <i className="fas fa-times"></i> Delete
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                className="btn btn-danger custom-btn ml-2"
+                                                                onClick={() => handleCancel(payment.bookingID)}
+                                                            >
+                                                                <i className="fas fa-times"></i> Cancel
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                        ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             ) : (
                                 <p>No payments found.</p>
                             )}
@@ -261,6 +264,5 @@ const handleDelete = async (bookingID) => {
             </div>
         </div>
     );
-};
-
+}    
 export default Payments;
