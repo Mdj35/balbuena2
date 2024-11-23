@@ -9,6 +9,8 @@ const Payments = () => {
     const [payments, setPayments] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [searchQuery, setSearchQuery] = useState(''); // State for search query
+
 
     // Handle logout
     const handleLogout = () => {
@@ -43,6 +45,14 @@ const Payments = () => {
             setIsLoading(false);
         }
     };
+    const handleSearchChange = (e) => {
+        setSearchQuery(e.target.value);
+    };
+
+    // Filter payments based on the search query
+    const filteredPayments = payments.filter(payment =>
+        payment.customerName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     // Handle accepting a payment (mark as completed)
     const handleAccept = async (bookingID) => {
@@ -97,6 +107,27 @@ const Payments = () => {
             console.error('Error updating booking status:', error);
         }
     };
+    // Handle deleting a booking
+const handleDelete = async (bookingID) => {
+    try {
+        const response = await axios.post('https://vynceianoani.helioho.st/Balbuena/delete.php', {
+            bookingID: bookingID,
+        });
+
+        if (response.data.success) {
+            // Remove the deleted booking from the local state
+            setPayments((prevPayments) => prevPayments.filter((payment) => payment.bookingID !== bookingID));
+            console.log(`Booking ID ${bookingID} deleted successfully.`);
+        } else {
+            console.error('Failed to delete booking ID:', bookingID);
+        }
+    } catch (error) {
+        console.error('Error deleting booking:', error);
+    }
+};
+
+// Modify the actions rendering logic
+
 
     // Fetch payments on component mount
     useEffect(() => {
@@ -132,7 +163,17 @@ const Payments = () => {
                 <main className="col-md-10 mt-5">
                     <div className="card">
                         <div className="card-body">
+                            
                             <h2 className="text-center">Payment</h2>
+                            <div className="d-flex justify-content-between mb-3">
+                                <input
+                                    type="text"
+                                    className="form-control form-control-sm w-25"
+                                    placeholder="Search by customer name"
+                                    value={searchQuery}
+                                    onChange={handleSearchChange}
+                                />
+                            </div>
                             {isLoading ? (
                                 <p>Loading payments...</p>
                             ) : error ? (
@@ -152,15 +193,17 @@ const Payments = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                    {payments.map((payment) => (
-                                        <tr key={payment.bookingID}>
-                                            <td>{payment.bookingID}</td>
-                                            <td>{payment.customerName}</td>
-                                            <td>{payment.serviceType}</td>
-                                            <td>₱{isNaN(parseFloat(payment.servicePrice)) ? 'Invalid Price' : parseFloat(payment.servicePrice).toFixed(2)}</td>
-                                            <td>{payment.contactNo}</td>
-                                            <td>{payment.paymentMethod}</td>
-                                            <td>
+                                    {filteredPayments.map((payment) => (
+                                            <tr key={payment.bookingID}>
+                                                <td>{payment.bookingID}</td>
+                                                <td>{payment.customerName}</td>
+                                                <td>{payment.serviceType}</td>
+                                                <td>
+                                                    ₱{isNaN(parseFloat(payment.servicePrice)) ? 'Invalid Price' : parseFloat(payment.servicePrice).toFixed(2)}
+                                                </td>
+                                                <td>{payment.contactNo}</td>
+                                                <td>{payment.paymentMethod}</td>
+                                                <td>
                                                 <span
                                                     style={{
                                                         backgroundColor:
@@ -181,21 +224,30 @@ const Payments = () => {
                                                 </span>
                                             </td>
                                             <td>
-                                                {payment.status === 'pending' ? (
-                                                    <button
-                                                        className="btn btn-success custom-btn"
-                                                        onClick={() => handleAccept(payment.bookingID)}
-                                                    >
-                                                        <i className="fas fa-check"></i> Accept
-                                                    </button>
-                                                ) : null}
-                                                <button
-                                                    className="btn btn-danger custom-btn ml-2"
-                                                    onClick={() => handleCancel(payment.bookingID)}
-                                                >
-                                                    <i className="fas fa-times"></i> Cancel
-                                                </button>
-                                            </td>
+    {payment.status === 'pending' ? (
+        <button
+            className="btn btn-success custom-btn"
+            onClick={() => handleAccept(payment.bookingID)}
+        >
+            <i className="fas fa-check"></i> Accept
+        </button>
+    ) : null}
+    {payment.status === 'Completed' || payment.status === 'Canceled' ? (
+        <button
+            className="btn btn-danger custom-btn ml-2"
+            onClick={() => handleDelete(payment.bookingID)}
+        >
+            <i className="fas fa-times"></i> Delete
+        </button>
+    ) : (
+        <button
+            className="btn btn-danger custom-btn ml-2"
+            onClick={() => handleCancel(payment.bookingID)}
+        >
+            <i className="fas fa-times"></i> Cancel
+        </button>
+    )}
+</td>;
                                         </tr>
                                     ))}
                                     </tbody>

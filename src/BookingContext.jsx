@@ -10,6 +10,7 @@ export const BookingProvider = ({ children }) => {
         time: '',
         paymentMethod: '',
         email: ''
+        
     });
 
     return (
