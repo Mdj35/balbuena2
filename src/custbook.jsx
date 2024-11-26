@@ -7,6 +7,8 @@ import './Books.css';
 
 const CustBook = () => {
     const [bookings, setBookings] = useState([]);
+    const [searchQuery, setSearchQuery] = useState(''); // State for search input
+    const [filteredBookings, setFilteredBookings] = useState([]); // State for filtered data
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -14,8 +16,9 @@ const CustBook = () => {
             try {
                 const response = await axios.get('https://vynceianoani.helioho.st/Balbuena/getbook.php'); // Ensure this endpoint is correct
                 setBookings(response.data.data); // Access the data field
+                setFilteredBookings(response.data.data); // Set filtered data initially to all bookings
             } catch (error) {
-                console.error("Error fetching bookings:", error);
+                console.error('Error fetching bookings:', error);
             }
         };
 
@@ -25,26 +28,36 @@ const CustBook = () => {
     const handleDelete = async (id) => {
         try {
             await axios.delete(`https://vynceianoani.helioho.st/Balbuena/deleteBooking.php/${id}`);
-            setBookings(bookings.filter((booking) => booking.booking_id !== id)); // Match by booking_id
+            const updatedBookings = bookings.filter((booking) => booking.booking_id !== id);
+            setBookings(updatedBookings);
+            setFilteredBookings(updatedBookings); // Update filtered bookings after delete
         } catch (error) {
-            console.error("Error deleting booking:", error);
+            console.error('Error deleting booking:', error);
         }
     };
 
     const handleLogout = () => {
-        // Add any logout logic here (like clearing tokens)
         navigate('/');
     };
 
-    // Function to format date and time
+    const handleSearch = (e) => {
+        const query = e.target.value.toLowerCase();
+        setSearchQuery(query);
+        setFilteredBookings(
+            bookings.filter((booking) =>
+                booking.customer_name.toLowerCase().includes(query)
+            )
+        );
+    };
+
     const formatDate = (dateString) => {
         const date = new Date(dateString);
-        return format(date, 'MMMM dd, yyyy'); // Format date as 'Month Day, Year'
+        return format(date, 'MMMM dd, yyyy');
     };
 
     const formatTime = (timeString) => {
         const date = new Date(`1970-01-01T${timeString}`);
-        return format(date, 'hh:mm a'); // Format time as 'hh:mm AM/PM'
+        return format(date, 'hh:mm a');
     };
 
     return (
@@ -71,9 +84,22 @@ const CustBook = () => {
                         </button>
                     </div>
                 </nav>
-    
+
                 {/* Main Content */}
                 <main className="col-md-10 mt-5">
+                    {/* Search Bar */}
+                    {/* Search Bar */}
+<div className="mb-3 d-flex justify-content-end">
+    <input
+        type="text"
+        className="form-control form-control-sm w-25" // Bootstrap classes for small input and width
+        placeholder="Search by customer name"
+        value={searchQuery}
+        onChange={handleSearch}
+    />
+</div>
+
+
                     {/* Booking Table */}
                     <div className="card">
                         <div className="card-body">
@@ -90,15 +116,15 @@ const CustBook = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {bookings.length > 0 ? (
-                                        bookings.map((booking) => (
+                                    {filteredBookings.length > 0 ? (
+                                        filteredBookings.map((booking) => (
                                             <tr key={booking.booking_id}>
-                                                <td>{booking.booking_id}</td> {/* Updated to booking_id */}
-                                                <td>{booking.customer_name}</td> {/* Updated to customer_name */}
-                                                <td>{booking.service}</td> {/* Updated to services */}
-                                                <td>{booking.staffName}</td> {/* Fetched from staffName */}
-                                                <td>{formatDate(booking.date)}</td> {/* Format the date */}
-                                                <td>{formatTime(booking.time)}</td> {/* Format the time */}
+                                                <td>{booking.booking_id}</td>
+                                                <td>{booking.customer_name}</td>
+                                                <td>{booking.service}</td>
+                                                <td>{booking.staffName}</td>
+                                                <td>{formatDate(booking.date)}</td>
+                                                <td>{formatTime(booking.time)}</td>
                                                 <td>
                                                     <button className="btn btn-danger custom-btn" onClick={() => handleDelete(booking.booking_id)}>
                                                         <i className="fas fa-trash"></i>
@@ -107,7 +133,9 @@ const CustBook = () => {
                                             </tr>
                                         ))
                                     ) : (
-                                        <tr><td colSpan="7">No Records</td></tr>
+                                        <tr>
+                                            <td colSpan="7">No Records</td>
+                                        </tr>
                                     )}
                                 </tbody>
                             </table>
@@ -117,5 +145,6 @@ const CustBook = () => {
             </div>
         </div>
     );
-}    
+};
+
 export default CustBook;

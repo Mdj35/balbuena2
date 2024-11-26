@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import { BookingContext } from './BookingContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import jsPDF from 'jspdf'; 
+import jsPDF from 'jspdf';
 import './BillingInterface.css';
 
 const BillingInterface = () => {
@@ -10,80 +10,76 @@ const BillingInterface = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
-    // Add this useEffect for fetching staff names
-
-
-    // Validate formData on load
-   useEffect(() => {
-    const validateAndFetchStaffNames = async () => {
-        // Validation logic
-        if (
-            !formData ||
-            !formData.services ||
-            formData.services.length === 0 || // Ensure at least one service is selected
-            !formData.name ||
-            !formData.email ||
-            !formData.date ||
-            !formData.time
-        ) {
-            alert('Invalid booking data. Please ensure all fields are filled and at least one service is selected.');
-            navigate('/services-barber'); // Redirect to the appropriate page
-            return; // Stop further execution
-        }
-
-        // Fetch staff names
-        try {
-            if (formData.services && formData.services.length > 0) {
-                // Clone the services array to update names without mutating original state directly
-                const updatedServices = await Promise.all(
-                    formData.services.map(async (service) => {
-                        if (service.staffID) {
-                            const response = await axios.post(
-                                'https://vynceianoani.helioho.st/Balbuena/api.php',
-                                { staffID: service.staffID }
-                            );
-
-                            // Assume API returns { staffName: "Name of the Staff" }
-                            if (response.data && response.data.staffName) {
-                                return {
-                                    ...service,
-                                    staffName: response.data.staffName,
-                                };
-                            }
-                        }
-                        return service; // Return the service as-is if no staffID or API fails
-                    })
-                );
-
-                // Update formData with fetched staff names
-                formData.services = updatedServices;
+    useEffect(() => {
+        const validateAndFetchData = async () => {
+            if (
+                !formData ||
+                !formData.services ||
+                formData.services.length === 0 ||
+                !formData.name ||
+                !formData.email ||
+                !formData.date ||
+                !formData.time
+            ) {
+                alert('Invalid booking data. Please ensure all fields are filled and at least one service is selected.');
+                navigate('/services-barber');
+                return;
             }
-        } catch (error) {
-            console.error('Error fetching staff names:', error);
-        }
-    };
 
-    validateAndFetchStaffNames();
-}, [formData, navigate]);
+            try {
+                // Fetch staff names
+                if (formData.services && formData.services.length > 0) {
+                    const updatedServices = await Promise.all(
+                        formData.services.map(async (service) => {
+                            if (service.staffID) {
+                                const response = await axios.post(
+                                    'https://vynceianoani.helioho.st/Balbuena/api.php',
+                                    { staffID: service.staffID }
+                                );
+
+                                if (response.data && response.data.staffName) {
+                                    return {
+                                        ...service,
+                                        staffName: response.data.staffName,
+                                    };
+                                }
+                            }
+                            return service;
+                        })
+                    );
+
+                    formData.services = updatedServices;
+                }
+
+                // Add queue positions from localStorage
+                const queuePositions = JSON.parse(localStorage.getItem('queuePositions')) || {};
+                formData.services = formData.services.map((service) => ({
+                    ...service,
+                    queuePosition: queuePositions[service.serviceName] || 'Not available',
+                }));
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        };
+
+        validateAndFetchData();
+    }, [formData, navigate]);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
         setLoading(true);
 
         try {
-            // Calculate the total price for all selected services
             const totalPrice = formData.services.reduce(
                 (acc, service) => acc + parseFloat(service.servicePrice || 0),
                 0
             );
 
-            // Update formData with calculated totalPrice
             const updatedFormData = {
                 ...formData,
                 totalPrice,
             };
 
-            // Submit booking data
             const response = await axios.post(
                 'https://vynceianoani.helioho.st/Balbuena/submit-booking.php',
                 updatedFormData
@@ -92,7 +88,7 @@ const BillingInterface = () => {
             if (response.status === 200) {
                 alert('Payment Confirmed!');
                 generatePDFReceipt(updatedFormData);
-                navigate('/booking-done'); // Redirect after successful submission
+                navigate('/booking-done');
             } else {
                 throw new Error(response.data.message || 'Unexpected error during booking submission.');
             }
@@ -195,8 +191,17 @@ const BillingInterface = () => {
                             <p>Service: {service.serviceName}</p>
                             <p>Price: ₱{service.servicePrice}</p>
                             <p>Staff: {service.staffName} (ID: {service.staffID})</p>
+                            <p>
+    Queue Position: 
+    {typeof service.queuePosition === 'object'
+        ? Object.entries(service.queuePosition)
+              .map(([key, value]) => `${key}: ${value}`)
+              .join(', ')
+        : service.queuePosition || 'N/A'}
+</p>
+
                         </div>
-                    ))
+                    ))  
                 ) : (
                     <p>No services selected.</p>
                 )}
@@ -227,5 +232,6 @@ const BillingInterface = () => {
         </div>
     );
 };
+
 
 export default BillingInterface;

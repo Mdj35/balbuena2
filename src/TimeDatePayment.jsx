@@ -111,7 +111,13 @@ const TimeDatePayment = () => {
                     ...service,
                     queuePosition: positions[index], // Map each service's queue position
                 }));
-                setFormData({ ...formData, services: updatedServices });
+                
+                // Update the form data state
+                const updatedFormData = { ...formData, services: updatedServices };
+                setFormData(updatedFormData);
+    
+                // Save queue positions to local storage
+                localStorage.setItem('queuePositions', JSON.stringify(updatedServices));
             } else {
                 setNotification('Failed to fetch queue positions.');
                 setShowNotificationCard(true);
@@ -122,6 +128,8 @@ const TimeDatePayment = () => {
             setShowNotificationCard(true);
         }
     };
+    
+    
     
     // Fetch queue position when services are selected
     useEffect(() => {
