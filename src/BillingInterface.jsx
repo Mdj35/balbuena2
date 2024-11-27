@@ -6,7 +6,7 @@ import jsPDF from 'jspdf';
 import './BillingInterface.css';
 
 const BillingInterface = () => {
-    const { formData } = useContext(BookingContext);
+    const { formData, setFormData } = useContext(BookingContext);
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
@@ -57,13 +57,25 @@ const BillingInterface = () => {
                     ...service,
                     queuePosition: queuePositions[service.serviceName] || 'Not available',
                 }));
+
+                // Add contactNo and paymentMethod from localStorage
+                const customerContactNo = localStorage.getItem('contactNo');
+                const selectedPaymentMethod = localStorage.getItem('paymentMethod');
+
+                // Update formData with values from localStorage
+                setFormData({
+                    ...formData,
+                    contactNo: customerContactNo,
+                    paymentMethod: selectedPaymentMethod,
+                });
+
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
         };
 
         validateAndFetchData();
-    }, [formData, navigate]);
+    }, [formData, navigate, setFormData]);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -99,6 +111,7 @@ const BillingInterface = () => {
             setLoading(false);
         }
     };
+
     const generatePDFReceipt = (updatedFormData) => {
         const doc = new jsPDF();
     
@@ -148,16 +161,9 @@ const BillingInterface = () => {
     
         // Payment Information Section
         yOffset += 30; // Add spacing before payment details
-        doc.text(
-            `Payment Method: ${
-                updatedFormData.paymentMethod === 'pay_in_store' ? 'Pay in Store' : updatedFormData.paymentMethod
-            }`,
-            20,
-            yOffset
-        );
+        doc.text(`Payment Method: ${updatedFormData.paymentMethod}`, 20, yOffset);
         doc.text(`Customer Email: ${updatedFormData.email}`, 20, yOffset + 10);
         doc.text(`Contact Number: ${updatedFormData.contactNo}`, 20, yOffset + 20);
-    
         // Total Price Section
         const totalPrice = updatedFormData.services.reduce(
             (acc, service) => acc + (Number(service.servicePrice) || 0),
@@ -184,6 +190,8 @@ const BillingInterface = () => {
                 <h3>Customer Details:</h3>
                 <p>Name: {formData.name}</p>
                 <p>Email: {formData.email}</p>
+                <p>Contact Number: {formData.contactNo}</p> {/* Displaying contact number */}
+
                 <h3>Selected Services:</h3>
                 {formData.services && formData.services.length > 0 ? (
                     formData.services.map((service, index) => (
@@ -206,7 +214,7 @@ const BillingInterface = () => {
                     <p>No services selected.</p>
                 )}
                 <h3>Payment Method:</h3>
-                <p>{formData.paymentMethod}</p>
+                <p>{formData.paymentMethod}</p> {/* Displaying payment method */}
                 <h3>Date & Time:</h3>
                 <p>Date: {formData.date ? new Date(formData.date).toLocaleDateString() : 'Not selected'}</p>
                 <p>Time: {formData.time || 'Not selected'}</p>

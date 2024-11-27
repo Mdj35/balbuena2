@@ -200,10 +200,19 @@ const TimeDatePayment = () => {
             contactNo: customerContactNo, // Ensure contact number is included
             paymentMethod: selectedPaymentMethod,
         };
+    
+        // Save to state
         setFormData(updatedFormData);
+    
+        // Store contact number and payment method in local storage
+        localStorage.setItem('contactNo', customerContactNo);
+        localStorage.setItem('paymentMethod', selectedPaymentMethod);
+    
+        // Display notification and navigate
         setNotification('Booking information reviewed successfully!');
         navigate('/billing-interface');
     };
+    
     
     
 
